@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use CommandLine::Files;
+
+my $usage = "
+\tUsage: trim [ -tl -tr ] myfile.txt
+\tOr:    someotherprogram | trim [ -tl -tr ]
+
+\tTakes myfile.txt or stdin and prints it to stdout trimming the leading and trailing whitespace.
+
+\t -tr will make trim strip only trailing whitespace (whitespaces on the right).
+\t -tl will make trim strip only leading whitespace (whitespace on the left).
+
+";
+
+my @lines = getinput( $usage );
+my %args = map { $_ => 1} @ARGV;
+
+# Trimming white space.
+if( exists( $args{"-tl"} ) ) {
+    s/^[^\S\n]*// foreach @lines;
+} elsif( exists( $args{"-tr"} ) ) {
+    s/[^\S\n]*$// foreach @lines;
+} else {
+    s/^[^\S\n]*// foreach @lines;
+    s/[^\S\n]*$// foreach @lines;
+}
+
+
+print @lines;
+

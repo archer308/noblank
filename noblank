@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use CommandLine::Files;
+
+my $usage = "
+\tUsage: noblank [ -t -tl -tr -n -l ] myfile.txt
+\tOr:    someotherprogram | noblank
+
+\tTakes myfile.txt or stdin and prints it to stdout without any blank lines.
+
+\t -t will make noblank trim whitespace off the left and right of lines as well.
+\t -tl and -tr will make noblank trim whitespace off only the left OR right of lines, respectively.
+
+\t -n will make noblank remove only lines that are a single end of line character (\\n).  If there is even a single space or tab, the line will remain.
+\t -l will leave blank lines.  This may be handy in conjuction with one of the trim options if you wish to leave blank lines, but trim whitespace around lines.
+\t     Obviously if you do this, lines consisting of only spaces and tabs will remain, however they will be trimmed down to just an end of line character (\\n)
+\t     regardless of which trim option you choose.
+
+";
+
+my @lines = getinput( $usage );
+my %args = map { $_ => 1} @ARGV;
+
+# Killing blank lines
+if( exists( $args{"-n"} ) ) {
+    s/^\n$// foreach @lines;
+} elsif( exists( $args{"-l"} ) ) {
+    # Do Nothing.
+} else {
+    s/^\s*$//g foreach @lines;
+}
+
+# Trimming white space.
+if( exists( $args{"-t"} ) ) {
+    s/^[^\S\n]*// foreach @lines;
+    s/[^\S\n]*$// foreach @lines;
+} elsif( exists( $args{"-tl"} ) ) {
+    s/^[^\S\n]*// foreach @lines;
+} elsif( exists( $args{"-tr"} ) ) {
+    s/[^\S\n]*$// foreach @lines;
+}
+
+print @lines;
+
