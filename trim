@@ -5,19 +5,30 @@ use warnings;
 
 use CommandLine::Files;
 
+my $VERSION = "1.00";
+
 my $usage = "
-\tUsage: trim [ -tl -tr ] myfile.txt
-\tOr:    someotherprogram | trim [ -tl -tr ]
+\tUsage:
+\t    trim [ -r ] [ -tl -tr ] myfile.txt [ files... ]
+\tOr:
+\t    someotherprogram | trim [ -tl -tr ]
 
 \tTakes myfile.txt or stdin and prints it to stdout trimming the leading and trailing whitespace.
 
 \t -tr will make trim strip only trailing whitespace (whitespaces on the right).
 \t -tl will make trim strip only leading whitespace (whitespace on the left).
 
+\t -r to recursively process text files found in directories.
+
+\t -v or --version prints the version number.
+
 ";
 
-my @lines = getinput( $usage );
 my %args = map { $_ => 1} @ARGV;
+print "Version $VERSION\n" and exit( 0 ) if exists $args{ "-v" } or exists $args{ "--version" };
+
+my @lines = getinput( $usage );
+%args = map { $_ => 1} @ARGV;
 
 # Trimming white space.
 if( exists( $args{"-tl"} ) ) {

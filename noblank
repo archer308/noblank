@@ -5,9 +5,13 @@ use warnings;
 
 use CommandLine::Files;
 
+my $VERSION = "1.00";
+
 my $usage = "
-\tUsage: noblank [ -t -tl -tr -n -l ] myfile.txt
-\tOr:    someotherprogram | noblank
+\tUsage: 
+\t    noblank [ -r ] [ -t -tl -tr -n -l ] myfile.txt [ files... ]
+\tOr:
+\t    someotherprogram | noblank
 
 \tTakes myfile.txt or stdin and prints it to stdout without any blank lines.
 
@@ -19,10 +23,18 @@ my $usage = "
 \t     Obviously if you do this, lines consisting of only spaces and tabs will remain, however they will be trimmed down to just an end of line character (\\n)
 \t     regardless of which trim option you choose.
 
+\t -r to recursively process text files found in directories.
+
+\t -v or --version prints the version number.
+
 ";
 
-my @lines = getinput( $usage );
 my %args = map { $_ => 1} @ARGV;
+print "Version $VERSION\n" and exit( 0 ) if exists $args{ "-v" } or exists $args{ "--version" };
+
+my @lines = getinput( $usage );
+%args = map { $_ => 1} @ARGV;
+
 
 # Killing blank lines
 if( exists( $args{"-n"} ) ) {
