@@ -9,7 +9,7 @@ my $VERSION = "1.00";
 
 my $usage = "
 \tUsage: 
-\t    noblank [ -r ] [ -t -tl -tr -n -l ] myfile.txt [ files... ]
+\t    noblank [ -r ] [ -i ] [ -t -tl -tr -n -l ] myfile.txt [ files... ]
 \tOr:
 \t    someotherprogram | noblank
 
@@ -25,6 +25,9 @@ my $usage = "
 
 \t -r to recursively process text files found in directories.
 
+\t -i to edit the files in place.  Rather than printing the contents of the files to stdout, the files will be modified and saved on disk with the blank lines stripped.
+\t    Use this option with care.
+
 \t -v or --version prints the version number.
 
 ";
@@ -32,28 +35,45 @@ my $usage = "
 my %args = map { $_ => 1} @ARGV;
 print "Version $VERSION\n" and exit( 0 ) if exists $args{ "-v" } or exists $args{ "--version" };
 
-my @lines = getinput( $usage );
+my @files = getfiles( $usage );
 %args = map { $_ => 1} @ARGV;
 
+print "Input was STDIN but -i was specified.  Cannot edit files in place on disk when input is STDIN.\n" and exit(1) if exists $args{"-i"} and $CommandLine::Files::InputWasSTDIN;
 
-# Killing blank lines
-if( exists( $args{"-n"} ) ) {
-    s/^\n$// foreach @lines;
-} elsif( exists( $args{"-l"} ) ) {
-    # Do Nothing.
-} else {
-    s/^\s*$//g foreach @lines;
+foreach my $file ( @files ) {
+    my @lines = ( );
+
+    open( FILE, $file ) or die "Failed to open file $file.  Error: $!";
+    push( @lines, $_ ) while( <FILE> );
+    close( FILE );
+
+    # Killing blank lines
+    if( exists( $args{"-n"} ) ) {
+        s/^\n$// foreach @lines;
+    } elsif( exists( $args{"-l"} ) ) {
+        # Do Nothing.
+    } else {
+        s/^\s*$//g foreach @lines;
+    }
+ 
+    # Trimming white space.
+    if( exists( $args{"-t"} ) ) {
+        s/^[^\S\n]*// foreach @lines;
+        s/[^\S\n]*$// foreach @lines;
+    } elsif( exists( $args{"-tl"} ) ) {
+        s/^[^\S\n]*// foreach @lines;
+    } elsif( exists( $args{"-tr"} ) ) {
+        s/[^\S\n]*$// foreach @lines;
+    }
+ 
+    if( exists( $args{"-i"} ) ) {
+        open( FILE, "> $file" ) or die "Failed to open file $file.  Error: $!";
+        print FILE @lines;
+        close( FILE );
+    } else {
+        print @lines;
+    }
 }
 
-# Trimming white space.
-if( exists( $args{"-t"} ) ) {
-    s/^[^\S\n]*// foreach @lines;
-    s/[^\S\n]*$// foreach @lines;
-} elsif( exists( $args{"-tl"} ) ) {
-    s/^[^\S\n]*// foreach @lines;
-} elsif( exists( $args{"-tr"} ) ) {
-    s/[^\S\n]*$// foreach @lines;
-}
 
-print @lines;
 

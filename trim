@@ -9,7 +9,7 @@ my $VERSION = "1.00";
 
 my $usage = "
 \tUsage:
-\t    trim [ -r ] [ -tl -tr ] myfile.txt [ files... ]
+\t    trim [ -r ] [ -i ] [ -tl -tr ] myfile.txt [ files... ]
 \tOr:
 \t    someotherprogram | trim [ -tl -tr ]
 
@@ -20,6 +20,9 @@ my $usage = "
 
 \t -r to recursively process text files found in directories.
 
+\t -i to edit the files in place.  Rather than printing the contents of the files to stdout, the files will be modified and saved on disk with lines trimmed.
+\t    Use this option with care.
+
 \t -v or --version prints the version number.
 
 ";
@@ -27,19 +30,34 @@ my $usage = "
 my %args = map { $_ => 1} @ARGV;
 print "Version $VERSION\n" and exit( 0 ) if exists $args{ "-v" } or exists $args{ "--version" };
 
-my @lines = getinput( $usage );
+my @files = getfiles( $usage );
 %args = map { $_ => 1} @ARGV;
 
-# Trimming white space.
-if( exists( $args{"-tl"} ) ) {
-    s/^[^\S\n]*// foreach @lines;
-} elsif( exists( $args{"-tr"} ) ) {
-    s/[^\S\n]*$// foreach @lines;
-} else {
-    s/^[^\S\n]*// foreach @lines;
-    s/[^\S\n]*$// foreach @lines;
+print "Input was STDIN but -i was specified.  Cannot edit files in place on disk when input is STDIN.\n" and exit(1) if exists $args{"-i"} and $CommandLine::Files::InputWasSTDIN;
+
+foreach my $file ( @files ) {
+    my @lines = ( );
+
+    open( FILE, $file ) or die "Failed to open file $file.  Error: $!";
+    push( @lines, $_ ) while( <FILE> );
+    close( FILE );
+
+    # Trimming white space.
+    if( exists( $args{"-tl"} ) ) {
+        s/^[^\S\n]*// foreach @lines;
+    } elsif( exists( $args{"-tr"} ) ) {
+        s/[^\S\n]*$// foreach @lines;
+    } else {
+        s/^[^\S\n]*// foreach @lines;
+        s/[^\S\n]*$// foreach @lines;
+    }
+
+    if( exists( $args{"-i"} ) ) {
+        open( FILE, "> $file" ) or die "Failed to open file $file.  Error: $!";
+        print FILE @lines;
+        close( FILE );
+    } else {
+        print @lines;
+    }
 }
-
-
-print @lines;
 
