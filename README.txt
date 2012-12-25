@@ -8,8 +8,7 @@ noblank is a simple command line program that removes blank lines from files or 
 Dependencies:
 =========================================
 
-Requires the perl module CommandLine::Files.
-https://github.com/archer308/CommandLine
+None
 
 
 
@@ -50,10 +49,5 @@ To print full usage information, run noblank or trim without any arguments.
 
 
 
-
-Notes: 
-=========================================
-
-None.
 
 

@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-use CommandLine::Files;
+use File::Find;
 
-my $VERSION = "1.00";
+my $VERSION = "1.20";
 
 my $usage = "
 \tUsage: 
@@ -32,13 +32,116 @@ my $usage = "
 
 ";
 
+
+
+### Getting Input From the Command Line ###
+###########################################
+my $InputWasSTDIN = 0;
+
+# This reads in from STDIN OR files given on the command line.  Not both!!!
+# 
+# getfiles( $usage_message, 1, "-r" );
+#
+# Returns a @files array that will contain all the files given on the command line for input.
+# The array will contain all files in all directories given on the command line.
+# If STDIN was the input, this will be a single file in the @files array ( by pushing "-" onto the files array ).
+sub getfiles {
+    my $usage = $_[0];
+    my $RemoveFilesFromARGS = $_[1];
+    my $RecurseFlag = $_[2];
+
+    # Defaults
+    $RemoveFilesFromARGS = 1 if not defined $RemoveFilesFromARGS;
+    $RecurseFlag = "-r" if not defined $RecurseFlag;
+
+
+    # Print a usage message if we have no arguments.
+    if( @ARGV == 0 && -t STDIN && -t STDERR ) {
+        print $usage;
+        exit( 0 );
+    }
+   
+
+    
+    # If we got past the usage message above, then we either...
+    #     1) Have arguments on the command line.
+    #     2) Are being piped some input from STDIN.
+    #     3) Both 1 and 2.
+    
+    # We want to see if we have a "-r" argument for recursion of directories.
+    my $recurse = 0;
+    my %args = map { $_ => 1 } @ARGV;
+    $recurse = 1 if exists $args{ $RecurseFlag } or $RecurseFlag eq "ALWAYS_RECURSE";
+
+
+    # If we have arguments on the command line, then they may be files to read in from.
+    # Files come on the END of the command, and arguments come before.
+    # So we reverse the command line arguments here first...
+    my @files = ( );
+    my @possible_files = reverse( @ARGV );
+    my $filecount = 0;
+    
+    # ... and start testing for existing files.
+    # Each existing file gets pushed onto the @files array.
+    # We also count the number of files.
+    foreach( @possible_files ) {
+        if( -f $_ ) {
+            push( @files, $_ );
+            $filecount++;
+        } elsif( -d $_ ) {
+            if( $recurse ) {
+                find( sub { push( @files, $File::Find::name ) if -f $_ }, $_ );
+                $filecount++;
+            } else {
+                print "Recursion not specified, not descending into directory \"$_\".  Exiting...\n";
+                exit( 1 );
+            }
+        } else {
+            last;
+        }
+    }
+    
+    # We want the files in the order they were given on the command line, so we reverse the @files array.
+    @files = reverse( @files );
+
+    if( @files ) {
+        # Do Nothing.  We have files from the command line.
+    } elsif( ! -t STDIN ) {
+        # Our input came from STDIN.  So we push it onto the @files array as a file.
+        # If you open( MYFILEHANDLE, "-" ), then you get STDIN opened as a filehandle, just as if you had opened some file on disk.
+        # We also set InputWasSTDIN to true;
+        push( @files, "-" );
+        $InputWasSTDIN = 1;
+    } else {
+        &printusage( $usage );
+        exit( 0 );
+    }
+
+
+    # If we want to remove the files given from the @ARGV array (and by default we do), then we remove them here.
+    if( $RemoveFilesFromARGS ) {
+        while( $filecount ) {
+            pop @ARGV;
+            $filecount--;
+        }
+    }
+
+    @files;
+}
+###########################################
+
+
+
+
+### Main Program ###
+###########################################
 my %args = map { $_ => 1} @ARGV;
 print "Version $VERSION\n" and exit( 0 ) if exists $args{ "-v" } or exists $args{ "--version" };
 
 my @files = getfiles( $usage );
 %args = map { $_ => 1} @ARGV;
 
-print "Input was STDIN but -i was specified.  Cannot edit files in place on disk when input is STDIN.\n" and exit(1) if exists $args{"-i"} and $CommandLine::Files::InputWasSTDIN;
+print "Input was STDIN but -i was specified.  Cannot edit files in place on disk when input is STDIN.\n" and exit(1) if exists $args{"-i"} and $InputWasSTDIN;
 
 foreach my $file ( @files ) {
     my @lines = ( );
@@ -75,5 +178,5 @@ foreach my $file ( @files ) {
     }
 }
 
-
+###########################################
 
